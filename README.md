@@ -18,9 +18,9 @@ CS:OPN is a CS2 case opening simulator where users can open up cases and see wha
 - [Go](https://go.dev/) (fast, lightweight backend)
 - Web framework: [Fiber](https://gofiber.io/) or [Chi](https://github.com/go-chi/chi)
 - ORM / DB Layer: [GORM](https://gorm.io/) or [SQLC](https://sqlc.dev/)
-- Database: PostgreSQL (scalable) or SQLite (lightweight for prototyping)
+- Database: PostgreSQL (scalable)
 - Authentication: JWT-based (optional)
-- Deployment: [Railway](https://railway.app/), [Render](https://render.com/), or [Fly.io](https://fly.io/)
+- Deployment: [Railway](https://railway.app/), [Render](https://render.com/)
 
 ## 📂 Project Structure
 
