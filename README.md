@@ -24,6 +24,8 @@ CS:OPN is a CS2 case opening simulator where users can open up cases and see wha
 
 ## 📂 Project Structure
 
+(coming soon)
+
 ## 🔑 Core Features
 
 - 🎨 **Case Opening Animation** – smooth roll animations using Framer Motion
