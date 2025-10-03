@@ -172,7 +172,7 @@ export default function HomePage() {
           <h2 className="text-4xl font-bold mb-6">Ready to Start Opening?</h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of players experiencing the thrill of CS2 case
-            opening. No risk, all the excitement.
+            opening. No risk, all the excitement, completely free!!.
           </p>
           <Button size="lg" className="text-lg px-8 py-6 cs2-glow">
             Open Your First Case
