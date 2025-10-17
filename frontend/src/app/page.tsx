@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
@@ -22,9 +23,15 @@ export default function HomePage() {
               >
                 Cases
               </a>
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
+              <Link href="/login">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Sign In
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
