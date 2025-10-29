@@ -20,8 +20,8 @@ type User struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Inventory   []InventoryItem `gorm:"foreignKey:UserID" json:"-"`
-	Transactions []Transaction  `gorm:"foreignKey:UserID" json:"-"`
+// 	Inventory   []InventoryItem `gorm:"foreignKey:UserID" json:"-"`
+// 	Transactions []Transaction  `gorm:"foreignKey:UserID" json:"-"`
 }
 
 // function to handle pre-user creation

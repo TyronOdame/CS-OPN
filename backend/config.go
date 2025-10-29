@@ -7,7 +7,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 // Config has access to all the configuration variables needed for the application
 type Config struct {
 	DBHost     string
@@ -15,6 +14,7 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+	ServerPort  string
 	JWTSecret  string
 	frontendURL string
 
@@ -34,6 +34,7 @@ func LoadConfig() (*Config, error) {
 		DBUser:     os.Getenv("DB_USER"),
 		DBPassword: os.Getenv("DB_PASSWORD"),
 		DBName:     os.Getenv("DB_NAME"),
+		ServerPort:  getEnv("PORT", "8080"),
 		JWTSecret:  os.Getenv("JWT_SECRET"),
 		frontendURL: os.Getenv("FRONTEND_URL"),
 	}

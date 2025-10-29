@@ -10,13 +10,13 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// InitDB initializes the database connection using GORM
+// DB initializes the database connection using GORM
 var DB *gorm.DB
 
 // ConnectDB establishes a connection to the PostgreSQL database
-func ConnectDB(host, port, user, password, dbname string) (*gorm.DB, error) {
+func ConnectDB(host, port, user, password, dbname string)  error {
 	// build Postgres connection string
-	dsn := fmt.Sprint(
+	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname,
 	)
 
@@ -27,22 +27,27 @@ func ConnectDB(host, port, user, password, dbname string) (*gorm.DB, error) {
 	})	
 
 	if err != nil {
-		log.Printf("Failed to connect to database: %v", err)
-		return nil, err
+		return fmt.Errorf("Failed to connect to database: %w", err)
 	}
 
-	// Auto-migrate the models to create/update database tables
-	err = DB.AutoMigrate(
+	log.Println("Database connection successful")
+	return nil
+}
+
+
+
+// Auto-migrate the models to create/update database tables
+func AutoMigrate() error {
+	log.Println("Running database migrations...")
+	err := DB.AutoMigrate(
 		&models.User{},
 	)
 
 	if err != nil {
-		log.Printf("Failed to auto-migrate database: %v", err)
-		return nil, err
+		return fmt.Errorf("AutoMigrate failed: %w", err)
 	}
 
-	log.Println("Database connection established and models migrated")
-	return DB, nil
-		
-
+	log.Println("Database migrations completed successfully")
+	return nil
 }
+	
