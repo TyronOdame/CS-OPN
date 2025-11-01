@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/TyronOdame/CS-OPN/backend/database"
+	"github.com/TyronOdame/CS-OPN/backend/handlers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -45,9 +46,18 @@ func main() {
 		})
 	})
 
+	//Auth routes
+	authRoutes := router.Group("/auth")
+	{
+		authRoutes.POST("/register", handlers.RegisterHandler(cfg.JWTSecret))
+		authRoutes.POST("/login", handlers.Login(cfg.JWTSecret))
+	}
+
 	// Start server
 	log.Printf("🚀 Server starting on port %s", cfg.ServerPort)
 	log.Printf("📍 Health check: http://localhost:%s/health", cfg.ServerPort)
 	router.Run(":" + cfg.ServerPort)
 
+
+	
 }
