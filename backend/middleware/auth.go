@@ -56,3 +56,17 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 
 	}
 }
+
+// GetUserID is a helper function to extract user ID from context
+func GetUserID(c * gin.Context) (uuid.UUID, error) {
+	userID, exists := c.Get("userID")
+
+	// check if userID exists in context
+	if !exists {
+		// if its not found, return an error
+		return uuid.Nil, gin.Error{Err: http.ErrNotSupported, Type: gin.ErrorTypePrivate}
+	}
+	// if found, convert it to uuid.UUID and return
+	return userID.(uuid.UUID), nil
+}
+
