@@ -5,6 +5,7 @@ import (
 
 	"github.com/TyronOdame/CS-OPN/backend/database"
 	"github.com/TyronOdame/CS-OPN/backend/handlers"
+	"github.com/TyronOdame/CS-OPN/backend/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -53,9 +54,20 @@ func main() {
 		authRoutes.POST("/login", handlers.Login(cfg.JWTSecret))
 	}
 
+	// User routes (protected - requires JWT token)
+	userRoutes := router.Group("/user")
+	userRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		userRoutes.GET("/profile", handlers.GetProfile)
+		userRoutes.PUT("/profile", handlers.UpdateProfile)
+	}
+
 	// Start server
 	log.Printf("🚀 Server starting on port %s", cfg.ServerPort)
 	log.Printf("📍 Health check: http://localhost:%s/health", cfg.ServerPort)
+	log.Printf("👤 Profile: GET http://localhost:%s/user/profile (protected)", cfg.ServerPort)
+	log.Printf("✏️  Update: PUT http://localhost:%s/user/profile (protected)", cfg.ServerPort)
+	log.Printf("🔐 Register: POST http://localhost:%s/auth/register", cfg.ServerPort)
 	router.Run(":" + cfg.ServerPort)
 
 
