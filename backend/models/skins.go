@@ -31,3 +31,43 @@ func (s *Skin) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// ToJSON converts the Skin model to a JSON-compatible map
+func (s *Skin) ToJSON() map[string]interface{} {
+	return map[string]interface{}{
+		"id":          s.ID,
+		"name":        s.Name,
+		"weapon_type": s.WeaponType,
+		"rarity":      s.Rarity,
+		"float":       s.Float,
+		"image_url":   s.ImageURL,
+		"min_value":   s.MinValue,
+		"max_value":   s.MaxValue,
+		"description": s.Description,
+		"created_at":  s.CreatedAt,
+		"updated_at":  s.UpdatedAt,
+	}
+}
+
+// GetAverageValue calculates the average value of the skin based on its min and max values
+func (s *Skin) GetAverageValue() float64 {
+	return (s.MinValue + s.MaxValue) / 2
+}
+
+//GetRarityColor returns a color code based on the skin's rarity
+func (s *Skin) GetRarityColor() string {
+	rarityColors := map[string]string{
+		"Consumer Grade": "#B0C3D9",
+		"Industrial Grade": "#5E98D9",
+		"Mil-Spec": "#4B69FF",
+		"Restricted": "#8847FF",
+		"Classified": "#D32CE6",
+		"Covert": "#EB4B4B",
+		"Exceedingly Rare": "#FFD700",
+	}
+
+	if color, exists := rarityColors[s.Rarity]; exists {
+		return color
+	}
+	return "#FFFFFF" // default to white if rarity not found
+}
