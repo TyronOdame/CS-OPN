@@ -16,6 +16,7 @@ type Inventory struct {
 	Float           float64      `gorm:"not null" json:"float"`
 	AcquiredFrom    string       `gorm:"not null" json:"acquired_from"`
 	Value           float64      `gorm:"not null" json:"value"`
+	IsSold          bool         `gorm:"not null;default:false" json:"is_sold"`
 	SoldAt          *time.Time   `json:"sold_at"`
 	CreatedAt       time.Time    `json:"created_at"`
 	UpdatedAt       time.Time    `json:"updated_at"`
@@ -47,6 +48,7 @@ func (i *Inventory) ToJSON() map[string] interface{} {
 		"float":        i.Float,
 		"acquired_from": i.AcquiredFrom,
 		"value":        i.Value,
+		"is_sold":      i.IsSold,
 		"created_at":   i.CreatedAt,
 		"updated_at":   i.UpdatedAt,
 	}
@@ -83,12 +85,13 @@ func (i *Inventory) GetCondition() string {
 
 // CanBeSold checks if the inventory item can be sold
 func(i *Inventory) CanBeSold() bool {
-	return i.SoldAt != nil
+	return !i.IsSold
 }
 
 //sell marks the inventory item as sold at the given time
 func (i *Inventory) Sell(tx *gorm.DB) error {
 	now := time.Now()
+	i.IsSold = true
 	i.SoldAt = &now
 	return tx.Save(i).Error
 }
