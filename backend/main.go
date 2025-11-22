@@ -35,6 +35,10 @@ func main() {
 		log.Fatal("❌ Migration failed:", err)
 	}
 
+	if err := database.SeedDatabase(); err != nil {
+		log.Fatal("❌ Database seeding failed:", err)
+	}
+
 	// Create HTTP server 
 	router := gin.Default()
 
