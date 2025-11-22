@@ -41,6 +41,15 @@ func AutoMigrate() error {
 	log.Println("Running database migrations...")
 	err := DB.AutoMigrate(
 		&models.User{},
+		&models.Skin{},
+		&models.Case{},
+
+		// Junction/ relationship models 
+
+		&models.CaseContent{},   // this links the cases and skins
+		&models.Inventory{},     // this links the users and the skins they own
+		&models.Transaction{},   // this records user transactions
+
 	)
 
 	if err != nil {
