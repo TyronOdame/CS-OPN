@@ -4,7 +4,6 @@ import (
     "log"
 
     "github.com/TyronOdame/CS-OPN/backend/models"
- 
 )
 
 // SeedDatabase populates the database with sample cases and skins
@@ -42,7 +41,8 @@ func SeedDatabase() error {
 
 // createSkins creates sample skins across all rarities
 func createSkins() (map[string]models.Skin, error) {
-    skins := map[string]models.Skin{
+    // Define skins with their properties
+    skinDefinitions := map[string]models.Skin{
         // Consumer Grade (Common - 79.92%)
         "tec9_groundwater": {
             Name:        "Tec-9 | Groundwater",
@@ -64,7 +64,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    1.00,
             Description: "It has been decorated with a mint-colored pattern of traditional Japanese designs.",
         },
-
         // Industrial Grade (Uncommon - 15.98%)
         "mac10_fade": {
             Name:        "MAC-10 | Fade",
@@ -86,7 +85,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    4.00,
             Description: "It has been painted by airbrushing transparent paints that fade together over a chrome base coat.",
         },
-
         // Mil-Spec (Restricted - 3.2%)
         "m4a1s_hyper_beast": {
             Name:        "M4A1-S | Hyper Beast",
@@ -108,7 +106,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    10.00,
             Description: "It has been custom painted with a depiction of a water spirit.",
         },
-
         // Restricted (Purple - 0.64%)
         "ak47_redline": {
             Name:        "AK-47 | Redline",
@@ -130,7 +127,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    25.00,
             Description: "It has been custom painted with a multicolored pattern.",
         },
-
         // Classified (Pink - 0.32%)
         "m4a4_desolate_space": {
             Name:        "M4A4 | Desolate Space",
@@ -152,7 +148,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    50.00,
             Description: "It has been painted with a trigon pattern.",
         },
-
         // Covert (Red - 0.64%)
         "awp_asiimov": {
             Name:        "AWP | Asiimov",
@@ -174,7 +169,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    130.00,
             Description: "It has been anodized in a flame pattern.",
         },
-
         // Rare Special (Gold - Knives - 0.26%)
         "karambit_fade": {
             Name:        "★ Karambit | Fade",
@@ -196,7 +190,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    1800.00,
             Description: "It has been painted in a zebra-stripe pattern with aluminum and chrome paints with various reflectivities.",
         },
-
         "m9_bayonet_doppler": {
             Name:        "★ M9 Bayonet | Doppler",
             WeaponType:  "Knife",
@@ -207,7 +200,6 @@ func createSkins() (map[string]models.Skin, error) {
             MaxValue:    1500.00,
             Description: "It has been painted with black and silver metallic paints using a marbleizing medium, then candy coated.",
         },
-
         "bayonet_tiger_tooth": {
             Name:        "★ Bayonet | Tiger Tooth",
             WeaponType:  "Knife",
@@ -220,10 +212,14 @@ func createSkins() (map[string]models.Skin, error) {
         },
     }
 
-    for _, skin := range skins {
+    // Now create each skin and store it with its generated ID
+    skins := make(map[string]models.Skin)
+    for key, skinDef := range skinDefinitions {
+        skin := skinDef // Copy the definition
         if err := DB.Create(&skin).Error; err != nil {
             return nil, err
         }
+        skins[key] = skin // Store with generated ID
     }
 
     log.Printf("✅ Created %d skins\n", len(skins))
@@ -232,7 +228,8 @@ func createSkins() (map[string]models.Skin, error) {
 
 // createCases creates sample cases
 func createCases() (map[string]models.Case, error) {
-    cases := map[string]models.Case{
+    // Define cases with their properties
+    caseDefinitions := map[string]models.Case{
         "chroma": {
             Name:        "Chroma Case",
             Price:       2.50,
@@ -256,10 +253,14 @@ func createCases() (map[string]models.Case, error) {
         },
     }
 
-    for _, caseItem := range cases {
+    // Now create each case and store it with its generated ID
+    cases := make(map[string]models.Case)
+    for key, caseDef := range caseDefinitions {
+        caseItem := caseDef // Copy the definition
         if err := DB.Create(&caseItem).Error; err != nil {
             return nil, err
         }
+        cases[key] = caseItem // Store with generated ID
     }
 
     log.Printf("✅ Created %d cases\n", len(cases))
@@ -273,19 +274,19 @@ func linkCaseContents(cases map[string]models.Case, skins map[string]models.Skin
         skinKey string
         drop    float64
     }{
-        {"tec9_groundwater", 0.1598},      // Consumer Grade
-        {"p250_mint_kimono", 0.1598},      // Consumer Grade
-        {"mac10_fade", 0.0799},            // Industrial Grade
-        {"ssg08_acid_fade", 0.0799},       // Industrial Grade
-        {"m4a1s_hyper_beast", 0.032},      // Mil-Spec
+        {"tec9_groundwater", 0.1598},       // Consumer Grade
+        {"p250_mint_kimono", 0.1598},       // Consumer Grade
+        {"mac10_fade", 0.0799},             // Industrial Grade
+        {"ssg08_acid_fade", 0.0799},        // Industrial Grade
+        {"m4a1s_hyper_beast", 0.032},       // Mil-Spec
         {"glock18_water_elemental", 0.032}, // Mil-Spec
-        {"ak47_redline", 0.0064},          // Restricted
-        {"aug_chameleon", 0.0064},         // Restricted
-        {"m4a4_desolate_space", 0.0032},   // Classified
-        {"p90_trigon", 0.0032},            // Classified
-        {"awp_asiimov", 0.0026},           // Covert
-        {"karambit_fade", 0.00065},        // Rare Special (Knife)
-        {"butterfly_slaughter", 0.00065},  // Rare Special (Knife)
+        {"ak47_redline", 0.0064},           // Restricted
+        {"aug_chameleon", 0.0064},          // Restricted
+        {"m4a4_desolate_space", 0.0032},    // Classified
+        {"p90_trigon", 0.0032},             // Classified
+        {"awp_asiimov", 0.0026},            // Covert
+        {"karambit_fade", 0.00065},         // Rare Special (Knife)
+        {"butterfly_slaughter", 0.00065},   // Rare Special (Knife)
     }
 
     for _, content := range chromaContents {
