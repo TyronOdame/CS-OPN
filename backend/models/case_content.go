@@ -18,8 +18,8 @@ type CaseContent struct {
 
 
 	// Relationships (GORM will auto-populate these based on foreign keys)
-	Case    Case   `gorm:"foreignKey:CaseID;constraint:OnDelete;CASCADE;" json:"-"`
-	Skin    Skin   `gorm:"foreignKey:SkinID;constraint:OnDelete;CASCADE;" json:"-"`
+	Case    Case   `gorm:"foreignKey:CaseID;constraint:OnDelete:CASCADE" json:"-"`
+	Skin    Skin   `gorm:"foreignKey:SkinID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 //BeforeCreate hook runs before creating a new case content

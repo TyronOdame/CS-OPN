@@ -24,8 +24,8 @@ type Inventory struct {
 	
 
 	// Relationships
-	User User `gorm:"foreignKy:UserID;constraint:OnDelete:CASCADE" json:"-"`
-	Skin Skin `gorm:"foreignKey:SkinID;constraint:onDelete:CASCADE" json:"-"`
+	User User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
+	Skin Skin `gorm:"foreignKey:SkinID;constraint:OnDelete:CASCADE" json:"-"`
 }
 
 // BeforeCreate hook runs before creating a new inventory item
