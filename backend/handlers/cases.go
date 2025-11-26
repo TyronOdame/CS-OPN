@@ -55,7 +55,7 @@ func GetCaseByID(c *gin.Context) {
 		return
 	}
 
-	// get all skins in this casa with drop chances
+	// get all skins in this case with drop chances
 	var contents []models.CaseContent
 	if err := database.DB.Preload("Skin").Where("case_id = ?", caseID).Find(&contents).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -64,7 +64,133 @@ func GetCaseByID(c *gin.Context) {
 		})
 		return
 	}
+
+	// build response with case info and skins
+	var skins []map[string]interface{}
+	for_, content := range contents {
+		skinData := content.Skin.ToJSON()
+		skinData["drop_chance"] = content.DropChance
+		skinData["drop_percentage"] = content.GetDropPercentage()
+		skins = append(skins, skinData)
+	}
+
+	response := caseItem.ToJSON()
+	response["skins"] = skins
+
+	c.JSON(http.StatusOk, response)
+
 	
 
-	// 
+	
+}
+
+// OpenCase handles case opening logic
+func OpenCase(c *gin.Context) {
+
+	// get case ID from JWT
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	// Get case ID from URL
+	caseID := c.Param("id")
+	parsedCaseID, err := uuid.Parse(caseID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid case ID",
+		})
+		return
+	}
+
+	// start transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// get case details
+	var caseItem models.Case
+	if err := tx.First(&caseItem, "id = ?", parsedCaseID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Case not found",
+		})
+		return
+	}
+
+	//check if case is active
+	if !caseItem.IsActive {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Case is no longer available",
+		})
+		return
+	}
+
+	//get user and check balance
+	var user models.User
+	if err := tx.First(&user, "id = ?", userID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "User not found",
+		})
+		return
+	}
+
+	// check if user has enough balance
+	if user.Balance < caseItem.Price {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Insufficient balance",
+		})
+		return
+	}
+
+	//Get all possible skins in the case with drop chances
+	var contents []models.CaseContent
+	if err := tx.Preload("Skin").Where("case_id = ?", parsedCaseID).Find(&contents).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch case contents",
+		})
+		return
+	}
+
+	// select random skin based on drop chances
+	selectedContent, err := selectRandomSkin(contents)
+	if selectedContent == nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to select skin",
+		})
+		return
+	}
+
+
+	// Generate random float for skins 
+	randomFloat := generateFloat()
+
+	// Calculate value base on the float 
+	skin := selectedContent.Skin
+	floatMultiplier := 1.0 - randomFloat // better float will result in hight value
+	skinValue := skin.MinValue + (skin.MaxValue-skin.MinValue)*floatMultiplier
+
+	// Deduct Case bucks from user 
+	balanceBefore := user.Casebucks
+	user.Casebucks -= caseItem.Price
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update user balance",
+		})
+		return 
+	}
+
+	//
 }
