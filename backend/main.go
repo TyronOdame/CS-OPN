@@ -66,6 +66,17 @@ func main() {
 		userRoutes.PUT("/profile", handlers.UpdateProfile)
 	}
 
+	// Case routes
+	caseRoutes := router.Group("/cases")
+	{
+		// public routes
+		caseRoutes.GET("", handlers.GetAllCases)
+		caseRoutes.GET("/:id", handlers.GetCaseByID)
+
+		// protected routes
+		caseRoutes.POST("/:id/open", middleware.AuthMiddleware(cfg.JWTSecret), handlers.OpenCase)
+	}
+
 	// Start server
 	log.Printf("🚀 Server starting on port %s", cfg.ServerPort)
 	log.Printf("📍 Health check: http://localhost:%s/health", cfg.ServerPort)
