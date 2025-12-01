@@ -14,6 +14,7 @@ type TransactionType string
 
 const (
 	TransactionTypeSkinSell      TransactionType = "skin_sell"
+	TransactionTypeSkinSale	     TransactionType = "skin_sale"
 	TransactionTypeCaseOpen      TransactionType = "case_open"
 	TransactionTypeDailyLogin    TransactionType = "daily_login"
 	TransactionTypeRegistration  TransactionType = "registration"
