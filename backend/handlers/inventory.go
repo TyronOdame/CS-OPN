@@ -28,7 +28,7 @@ func GetUserInventory(c *gin.Context) {
 	query := database.DB.Preload("Skin").Where("user_id = ?", userID)
 
 	// Conditionally filter out sold items
-	if showSold != "false" {
+	if showSold == "false" {
 		query = query.Where("is_sold = ?", false)
 	}
 
@@ -55,7 +55,50 @@ func GetUserInventory(c *gin.Context) {
 	}
 
 	// convert to JSON
+	var response []map[string]interface{}
+	for _, item := range inventory {
+		itemData := item.ToJSON()
+		itemData["skin"] = item.Skin.ToJSON()
+		response = append(response, itemData)
+	}
+
+	// send success response 
+	c.JSON(http.StatusOK, gin.H{
+		"items":        response,
+		"total_value": totalValue,
+		"item_count":  itemCount,
+		"stats":       stats,
+	})
 
 
 	
+}
+
+// SellInventoryItem sells a skin for Case Bucks
+func SellInventoryItem(c *gin.Context) {
+	// Get user ID from JWT
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	// Get item ID from the URl parameter 
+	itemID := c.Param("id")
+	parsedItemID, err := uuid.Parse(itemID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error" : "Invalid item ID",
+		})
+		return
+	}
+
+
+
+
+
+
+
 }
