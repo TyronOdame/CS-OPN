@@ -77,6 +77,22 @@ func main() {
 		caseRoutes.POST("/:id/open", middleware.AuthMiddleware(cfg.JWTSecret), handlers.OpenCase)
 	}
 
+	// Inventory routes (protected)
+	inventoryRoutes := router.Group("/inventory")
+	inventoryRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		inventoryRoutes.GET("", handlers.GetUserInventory)
+		inventoryRoutes.POST("/:id/sell", handlers.SellInventoryItem)
+	}
+
+	// Transaction routes (protected)
+	transactionRoutes := router.Group("/transactions")
+	transactionRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		transactionRoutes.GET("", handlers.GetUserTransactions)
+	
+	}
+
 	// Start server
 	log.Printf("🚀 Server starting on port %s", cfg.ServerPort)
 	log.Printf("📍 Health check: http://localhost:%s/health", cfg.ServerPort)
