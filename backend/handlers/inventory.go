@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//GetUserInventory returns all skins owned by the user
+// GetUserInventory returns all skins owned by the user
 func GetUserInventory(c *gin.Context) {
 
 	// Get user ID from JWT
@@ -94,6 +94,94 @@ func SellInventoryItem(c *gin.Context) {
 		})
 		return
 	}
+
+	// Start database transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+
+	}()
+
+	// Fetch item (ensure it belongs to user and isn't already sold)
+	var item models.Inventory
+	if err := tx.Preload("Skin").Where("id = ? AND user_id = ? AND is_sold = ?", parsedItemID, userID, false ).First(&item).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Item not found or already sold",
+		})
+		return
+	}
+
+	// Get user to update balance
+	var user models.User
+	if err := tx.First(&user, "id = ?", userID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch user",
+		})
+		return
+	}
+
+	// mark the item as sold 
+	item.IsSold = true
+	now := time.Now()
+	item.SoldAt = &now
+	if err := tx.Save(&item).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to mark item as sold",
+		})
+		return
+	}
+
+	// Add Case Bucks to user balance 
+	balanceBefore := user.Casebucks
+	user.Casebucks += item.Value
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update user balance",
+		})
+		return
+	}
+
+	// Create transaction record 
+	transaction := models.Transaction{
+		UserID:        user.ID,
+		Type:          models.TransactionTypeSkinSale,
+		Amount:        item.Value,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  user.Casebucks,
+		Description:   "Sold " + item.Skin.Name,
+		ReferenceID:   &parsedItemID,
+
+	}
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create transaction",
+		})
+		return
+	}
+
+	// Commit transaction (make all changes permanent)
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to complete sale",
+		})
+		return
+	}
+
+	// Send success response 
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "skin sold successfully!",
+		"item":          item.ToJSON(),
+		"amount_earned": item.Value,
+		"new_balance":   user.Casebucks,
+		"transaction_id":   transaction.ID,
+	})
 
 
 
