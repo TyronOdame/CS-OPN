@@ -1,13 +1,99 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { authAPI } from '@/lib/api';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
+  const router = useRouter(); // ✅ ADD THIS - Initialize router
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentView, setCurrentView] = useState<
     'login' | 'register' | 'forgot'
   >('login');
+
+  // form data state
+  const [formData, setFormData] = useState({
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  // add loading state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+
+    // clear error on input change
+    if (error) setError(null);
+  };
+
+  // Handle login form submission
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      await authAPI.login({
+        email: formData.email,
+        password: formData.password,
+      });
+      router.push('/inventory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle registration form submission
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // basic password match validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // validate password length
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authAPI.register({
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+      });
+      router.push('/inventory');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle forgot password reset form submission
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('Password reset functionality is not implemented yet.');
+  };
 
   return (
     <div className="min-h-screen flex font-sans bg-zinc-950">
@@ -88,24 +174,48 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="space-y-4">
+            {/* ✅ ADD THIS - Error Alert */}
+            {error && (
+              <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* ✅ WRAP IN FORM - Add onSubmit handler */}
+            <form
+              onSubmit={
+                currentView === 'login'
+                  ? handleLogin
+                  : currentView === 'register'
+                  ? handleRegister
+                  : handleForgotPassword
+              }
+              className="space-y-4"
+            >
+              {/* Username field - Register only */}
               {currentView === 'register' && (
                 <div className="space-y-2">
                   <label
-                    htmlFor="name"
+                    htmlFor="username"
                     className="text-sm font-medium text-white block"
                   >
-                    Full Name
+                    Username {/* ✅ CHANGED from "Full Name" */}
                   </label>
                   <input
-                    id="name"
+                    id="username"
+                    name="username" // ✅ ADD THIS
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="cooluser123" // ✅ CHANGED
                     className="w-full h-12 px-4 border border-zinc-800 focus:ring-0 focus:outline-none shadow-none rounded-lg bg-zinc-900 focus:border-[#ea580c] text-white placeholder:text-zinc-500"
+                    value={formData.username} // ✅ ADD THIS
+                    onChange={handleInputChange} // ✅ ADD THIS
+                    required // ✅ ADD THIS
+                    disabled={loading} // ✅ ADD THIS
                   />
                 </div>
               )}
 
+              {/* Email field */}
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -115,12 +225,18 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="email"
+                  name="email" // ✅ ADD THIS
                   type="email"
                   placeholder="user@example.com"
                   className="w-full h-12 px-4 border border-zinc-800 focus:ring-0 focus:outline-none shadow-none rounded-lg bg-zinc-900 focus:border-[#ea580c] text-white placeholder:text-zinc-500"
+                  value={formData.email} // ✅ ADD THIS
+                  onChange={handleInputChange} // ✅ ADD THIS
+                  required // ✅ ADD THIS
+                  disabled={loading} // ✅ ADD THIS
                 />
               </div>
 
+              {/* Password field */}
               {currentView !== 'forgot' && (
                 <div className="space-y-2">
                   <label
@@ -132,9 +248,15 @@ export default function LoginPage() {
                   <div className="relative">
                     <input
                       id="password"
+                      name="password" // ✅ ADD THIS
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter password"
                       className="w-full h-12 px-4 pr-10 border border-zinc-800 focus:ring-0 focus:outline-none shadow-none rounded-lg bg-zinc-900 focus:border-[#ea580c] text-white placeholder:text-zinc-500"
+                      value={formData.password} // ✅ ADD THIS
+                      onChange={handleInputChange} // ✅ ADD THIS
+                      required // ✅ ADD THIS
+                      minLength={6} // ✅ ADD THIS
+                      disabled={loading} // ✅ ADD THIS
                     />
                     <button
                       type="button"
@@ -181,6 +303,7 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Confirm Password field - Register only */}
               {currentView === 'register' && (
                 <div className="space-y-2">
                   <label
@@ -192,9 +315,14 @@ export default function LoginPage() {
                   <div className="relative">
                     <input
                       id="confirmPassword"
+                      name="confirmPassword" // ✅ ADD THIS
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Confirm password"
                       className="w-full h-12 px-4 pr-10 border border-zinc-800 focus:ring-0 focus:outline-none shadow-none rounded-lg bg-zinc-900 focus:border-[#ea580c] text-white placeholder:text-zinc-500"
+                      value={formData.confirmPassword} // ✅ ADD THIS
+                      onChange={handleInputChange} // ✅ ADD THIS
+                      required // ✅ ADD THIS
+                      disabled={loading} // ✅ ADD THIS
                     />
                     <button
                       type="button"
@@ -243,9 +371,11 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Forgot password link */}
               {currentView === 'login' && (
                 <div className="flex items-center justify-end">
                   <button
+                    type="button" // ✅ ADD THIS to prevent form submission
                     className="p-0 h-auto text-sm text-[#ea580c] hover:text-[#ea580c]/80 cursor-pointer underline-offset-4 hover:underline"
                     onClick={() => setCurrentView('forgot')}
                   >
@@ -253,13 +383,30 @@ export default function LoginPage() {
                   </button>
                 </div>
               )}
-            </div>
 
-            <button className="w-full h-12 text-sm font-medium bg-[#ea580c] text-white hover:bg-[#ea580c]/90 rounded-lg shadow-none cursor-pointer transition-colors">
-              {currentView === 'login' && 'Log In'}
-              {currentView === 'register' && 'Create Account'}
-              {currentView === 'forgot' && 'Send Reset Link'}
-            </button>
+              {/* ✅ CHANGE button to type="submit" and add loading state */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 text-sm font-medium bg-[#ea580c] text-white hover:bg-[#ea580c]/90 rounded-lg shadow-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {currentView === 'login' && 'Logging in...'}
+                    {currentView === 'register' && 'Creating account...'}
+                    {currentView === 'forgot' && 'Sending...'}
+                  </>
+                ) : (
+                  <>
+                    {currentView === 'login' && 'Log In'}
+                    {currentView === 'register' && 'Create Account'}
+                    {currentView === 'forgot' && 'Send Reset Link'}
+                  </>
+                )}
+              </button>
+            </form>
+            {/* ✅ END OF FORM */}
 
             <div className="text-center text-sm text-zinc-400">
               {currentView === 'login' && (
