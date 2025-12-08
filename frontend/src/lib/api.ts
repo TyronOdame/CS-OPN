@@ -5,6 +5,8 @@ import {
   LoginRequest,
   RegisterRequest,
   User,
+  Case,
+  CaseOpenResult,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -137,5 +139,27 @@ export const transactionsAPI = {
     params.append('limit', limit.toString());
 
     return authenticatedFetch(`/transactions?${params}`);
+  },
+};
+
+// This is a API section for the case opening feature
+export const casesAPI = {
+  //this gets all available cases
+  getAllCases: async (): Promise<Case[]> => {
+    // public endpoint
+    return publicFetch('/cases');
+  },
+
+  // this will get a specific case by id
+  getCaseById: async (caseId: string): Promise<Case> => {
+    // this is a public endpoint
+    return publicFetch(`/cases/${caseId}`);
+  },
+
+  // this will open a case and return the result
+  openCase: async (caseId: string): Promise<CaseOpenResult> => {
+    return authenticatedFetch(`/cases/${caseId}/open`, {
+      method: 'POST',
+    });
   },
 };

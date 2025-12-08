@@ -74,6 +74,24 @@ export interface AuthResponse {
   user: User;
 }
 
+// case types
+export interface Case {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// case opening result
+export interface CaseOpenResult {
+  skin: Skin;
+  inventory_item: InventoryItem;
+  new_balance: number;
+}
+
 // Rarity colors for UI
 export const RARITY_COLORS: Record<string, string> = {
   'Consumer Grade': 'from-gray-400 to-gray-500',
