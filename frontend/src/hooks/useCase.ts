@@ -5,7 +5,7 @@ import { casesAPI } from '@/lib/api';
 import { Case } from '@/lib/types';
 
 // Custom hook to fetch and manage cases
-export const userCases = () => {
+export const useCases = () => {
   // state to hold the fetched cases
   const [cases, setCases] = useState<Case[]>([]);
 
