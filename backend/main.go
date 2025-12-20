@@ -6,6 +6,7 @@ import (
 	"github.com/TyronOdame/CS-OPN/backend/database"
 	"github.com/TyronOdame/CS-OPN/backend/handlers"
 	"github.com/TyronOdame/CS-OPN/backend/middleware"
+	"github.com/TyronOdame/CS-OPN/backend/seed"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +40,12 @@ func main() {
 	if err := database.SeedDatabase(); err != nil {
 		log.Fatal("❌ Database seeding failed:", err)
 	}
+
+	// ✅ ADD: Seed database with test data
+	log.Println("🌱 Starting database seeding...")
+	seed.SeedCases()        // Add test cases
+	seed.SeedCaseSkins()    // Link skins to cases
+	log.Println("✅ Database seeding complete!")
 
 	// Create HTTP server 
 	router := gin.Default()
