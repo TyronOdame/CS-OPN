@@ -43,10 +43,12 @@ func AutoMigrate() error {
 		&models.User{},
 		&models.Skin{},
 		&models.Case{},
+		&models.CaseSkin{},
 
 		// Junction/ relationship models 
 
 		&models.CaseContent{},   // this links the cases and skins
+		&models.UserCase{},      // this tracks bought cases users can open later
 		&models.Inventory{},     // this links the users and the skins they own
 		&models.Transaction{},   // this records user transactions
 

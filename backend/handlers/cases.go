@@ -12,6 +12,100 @@ import (
     "github.com/google/uuid"
 )
 
+// BuyCase purchases a case and puts it in user's case inventory.
+func BuyCase(c *gin.Context) {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	caseID := c.Param("id")
+	parsedCaseID, err := uuid.Parse(caseID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid case ID"})
+		return
+	}
+
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var caseItem models.Case
+	if err := tx.First(&caseItem, "id = ? AND is_active = ?", parsedCaseID, true).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Case not found"})
+		return
+	}
+
+	var user models.User
+	if err := tx.First(&user, "id = ?", userID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+
+	if user.Casebucks < caseItem.Price {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":           "Insufficient Case Bucks",
+			"required":        caseItem.Price,
+			"current_balance": user.Casebucks,
+		})
+		return
+	}
+
+	balanceBefore := user.Casebucks
+	user.Casebucks -= caseItem.Price
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update balance"})
+		return
+	}
+
+	userCase := models.UserCase{
+		UserID:   userID,
+		CaseID:   caseItem.ID,
+		IsOpened: false,
+	}
+	if err := tx.Create(&userCase).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add case to inventory"})
+		return
+	}
+
+	transaction := models.Transaction{
+		UserID:        userID,
+		Type:          models.TransactionTypeCaseBuy,
+		Amount:        -caseItem.Price,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  user.Casebucks,
+		Description:   "Bought " + caseItem.Name,
+		ReferenceID:   &caseItem.ID,
+	}
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction"})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete purchase"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "Case purchased successfully!",
+		"purchased_case": userCase.ToJSON(),
+		"case":           caseItem.ToJSON(),
+		"new_balance":    user.Casebucks,
+		"transaction_id": transaction.ID,
+	})
+}
+
 // GetAllCases returns all active cases
 func GetAllCases(c *gin.Context) {
     var cases []models.Case
