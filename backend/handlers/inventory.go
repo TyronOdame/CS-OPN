@@ -34,7 +34,7 @@ func GetUserInventory(c *gin.Context) {
 
 	// Execute the query and get result 
 	var inventory []models.Inventory
-	if err := query.Order("acquired_at DESC").Find(&inventory).Error; err != nil {
+	if err := query.Order("created_at DESC").Find(&inventory).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch inventory",
 		})
