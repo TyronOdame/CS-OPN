@@ -16,7 +16,7 @@ func main() {
 	// loading configuration for .env file
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatal(" Failed to load config:", err)
+		log.Fatal("❌ Failed to load config:", err)
 	}
 
 	// connect to the database (PostgreSQL)
@@ -41,10 +41,11 @@ func main() {
 		log.Fatal("❌ Database seeding failed:", err)
 	}
 
-	// ✅ ADD: Seed database with test data
+	//  Seed test data
 	log.Println("🌱 Starting database seeding...")
-	seed.SeedCases()        // Add test cases
-	seed.SeedCaseSkins()    // Link skins to cases
+	seed.SeedCases()
+	seed.SeedSkins()        
+	seed.SeedCaseSkins()
 	log.Println("✅ Database seeding complete!")
 
 	// Create HTTP server 
@@ -92,6 +93,7 @@ func main() {
 		caseRoutes.GET("/:id", handlers.GetCaseByID)
 
 		// protected routes
+		caseRoutes.POST("/:id/buy", middleware.AuthMiddleware(cfg.JWTSecret), handlers.BuyCase)
 		caseRoutes.POST("/:id/open", middleware.AuthMiddleware(cfg.JWTSecret), handlers.OpenCase)
 	}
 
@@ -101,6 +103,8 @@ func main() {
 	{
 		inventoryRoutes.GET("", handlers.GetUserInventory)
 		inventoryRoutes.POST("/:id/sell", handlers.SellInventoryItem)
+		inventoryRoutes.GET("/cases", handlers.GetUserCases)
+		inventoryRoutes.POST("/cases/:id/open", handlers.OpenPurchasedCase)
 	}
 
 	// Transaction routes (protected)
@@ -111,9 +115,17 @@ func main() {
 	
 	}
 
+	// AI price check (mocked provider for v1)
+	aiRoutes := router.Group("/ai")
+	aiRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	{
+		aiRoutes.POST("/price-check", handlers.PriceCheckMock)
+	}
+
 	// Start server
 	log.Printf("🚀 Server starting on port %s", cfg.ServerPort)
 	log.Printf("📍 Health check: http://localhost:%s/health", cfg.ServerPort)
+	log.Printf("🎁 Cases: GET http://localhost:%s/cases", cfg.ServerPort)
 	log.Printf("👤 Profile: GET http://localhost:%s/user/profile (protected)", cfg.ServerPort)
 	log.Printf("✏️  Update: PUT http://localhost:%s/user/profile (protected)", cfg.ServerPort)
 	log.Printf("🔐 Register: POST http://localhost:%s/auth/register", cfg.ServerPort)

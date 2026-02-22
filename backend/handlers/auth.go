@@ -126,6 +126,14 @@ func Login(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
+		dailyRewardClaimed, err := ApplyDailyRewardForUser(&user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to apply daily reward",
+			})
+			return
+		}
+
 		// generate JWT
 		token, err := utils.GenerateJWT(user.ID, user.Email, user.Username, jwtSecret)
 		if err != nil {
@@ -137,9 +145,11 @@ func Login(jwtSecret string) gin.HandlerFunc {
 
 		// respond with token
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Login successful",
-			"token":   token,
-			"user":    user.ToJSON(),
+			"message":              "Login successful",
+			"token":                token,
+			"user":                 user.ToJSON(),
+			"daily_reward_claimed": dailyRewardClaimed,
+			"daily_reward_amount":  DailyLoginRewardAmount,
 		})
 
 	}
