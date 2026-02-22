@@ -15,6 +15,7 @@ type User struct {
 	Username 	string        `gorm:"uniqueIndex;not null" json:"username"`
 	Password    string        `gorm:"not null" json:"-"`
 	Casebucks   float64       `gorm:"default:0" json:"casebucks"`
+	LastDailyRewardAt *time.Time `json:"last_daily_reward_at,omitempty"`
 	CreatedAt   time.Time     `json:"created_at"`
 	UpdatedAt   time.Time     `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
@@ -62,6 +63,7 @@ func (u *User) ToJSON() map[string]interface{} {
 		"email":      u.Email,
 		"username":   u.Username,
 		"casebucks":  u.Casebucks,
+		"last_daily_reward_at": u.LastDailyRewardAt,
 		"created_at": u.CreatedAt,
 		"updated_at": u.UpdatedAt,
 	}

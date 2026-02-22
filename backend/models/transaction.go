@@ -13,6 +13,7 @@ import (
 type TransactionType string 
 
 const (
+	TransactionTypeCaseBuy       TransactionType = "case_buy"
 	TransactionTypeSkinSell      TransactionType = "skin_sell"
 	TransactionTypeSkinSale	     TransactionType = "skin_sale"
 	TransactionTypeCaseOpen      TransactionType = "case_open"
