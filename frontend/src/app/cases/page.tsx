@@ -2,21 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { authAPI, userAPI } from '@/lib/api';
+import { authAPI, casesAPI, userAPI } from '@/lib/api';
 import { useCases } from '@/hooks/useCase';
 import { CaseCard } from '@/components/cases/CaseCard';
-import { CaseOpeningModal } from '@/components/cases/CaseOpeningModal';
 import { Case, User } from '@/lib/types';
-import { Loader2, Package, DollarSign } from 'lucide-react';
+import { Loader2, Package, DollarSign, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function CasesPage() {
   const router = useRouter();
   const { cases, loading, error } = useCases();
-  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const [buyingCaseId, setBuyingCaseId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+
     if (!authAPI.isAuthenticated()) {
       router.push('/login');
       return;
@@ -24,9 +28,7 @@ export default function CasesPage() {
 
     const fetchUser = async () => {
       try {
-        const userData = await userAPI.getProfile();
-        console.log('👤 User data:', userData);
-        setUser(userData);
+        setUser(await userAPI.getProfile());
       } catch (err) {
         console.error('Failed to fetch user:', err);
         router.push('/login');
@@ -38,14 +40,33 @@ export default function CasesPage() {
     fetchUser();
   }, [router]);
 
-  const handleCaseOpened = async () => {
+  const refreshUser = async () => {
     try {
       const userData = await userAPI.getProfile();
       setUser(userData);
     } catch (err) {
-      console.error('Failed to refresh user:', err);
+      console.error('Failed to refresh user profile:', err);
     }
   };
+
+  const handleBuyCase = async (caseItem: Case) => {
+    try {
+      setBuyingCaseId(caseItem.id);
+      setNotice(null);
+      await casesAPI.buyCase(caseItem.id);
+      await refreshUser();
+      setNotice(`Bought ${caseItem.name}. Open it from your inventory.`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Failed to buy case');
+    } finally {
+      setBuyingCaseId(null);
+    }
+  };
+
+  //  Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   if (!authAPI.isAuthenticated()) {
     return null;
@@ -79,6 +100,24 @@ export default function CasesPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6 flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="border-gray-700 bg-gray-900/40 text-gray-200 hover:bg-gray-800"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/inventory')}
+            className="text-gray-300 hover:bg-gray-800"
+          >
+            Go to Inventory
+          </Button>
+        </div>
+
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Case Opening</h1>
@@ -100,13 +139,19 @@ export default function CasesPage() {
           )}
         </div>
 
+        {notice && (
+          <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-900/20 px-4 py-3 text-sm text-blue-200">
+            {notice}
+          </div>
+        )}
+
         {cases.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {cases.map((caseItem) => (
               <CaseCard
                 key={caseItem.id}
                 caseItem={caseItem}
-                onOpen={setSelectedCase}
+                onBuy={handleBuyCase}
                 userBalance={user?.casebucks || 0}
               />
             ))}
@@ -121,14 +166,13 @@ export default function CasesPage() {
           </div>
         )}
       </div>
-
-      {selectedCase && user && (
-        <CaseOpeningModal
-          open={!!selectedCase}
-          onClose={() => setSelectedCase(null)}
-          caseItem={selectedCase}
-          onSuccess={handleCaseOpened}
-        />
+      {buyingCaseId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="rounded-lg border border-gray-700 bg-gray-900 px-6 py-4 text-white">
+            <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+            Buying case...
+          </div>
+        </div>
       )}
     </div>
   );

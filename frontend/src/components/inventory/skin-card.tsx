@@ -70,6 +70,7 @@ export default function SkinCard({ item }: SkinCardProps) {
           src={item.skin.image_url || '/placeholder.svg'}
           alt={item.skin.name}
           fill
+          unoptimized
           className="object-cover group-hover:scale-110 transition-transform duration-300"
         />
       ) : (

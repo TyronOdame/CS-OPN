@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
+import { inventoryAPI } from '@/lib/api';
 
 interface Skin {
   id: string;
@@ -63,22 +64,11 @@ export default function SkinDetailView({ item }: SkinDetailViewProps) {
   const handleSell = async () => {
     try {
       setSelling(true);
-      const token = localStorage.getItem('token');
-
-      const response = await fetch(`/api/inventory/${item.id}/sell`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to sell skin');
-      }
+      await inventoryAPI.sellItem(item.id);
 
       // Redirect to inventory after successful sale
       window.location.href = '/inventory';
-    } catch (error) {
+    } catch {
       alert('Failed to sell skin');
       setSelling(false);
     }
@@ -97,6 +87,7 @@ export default function SkinDetailView({ item }: SkinDetailViewProps) {
                   alt={item.skin.name}
                   width={500}
                   height={500}
+                  unoptimized
                   className="max-w-full max-h-full object-contain"
                   priority
                 />
