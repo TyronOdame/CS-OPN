@@ -1,276 +1,107 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SkinCard from '@/components/inventory/skin-card';
 import InventoryHeader from '@/components/inventory/inventory-header';
-import InventorySidebar from '@/components/inventory/inventory-sidebar';
-
-interface Skin {
-  id: string;
-  name: string;
-  rarity: string;
-  image_url?: string;
-}
-
-interface InventoryItem {
-  id: string;
-  skin: Skin;
-  float: number;
-  condition: string;
-  value: number;
-  acquired_from: string;
-  acquired_at: string;
-}
-
-interface InventoryData {
-  items: InventoryItem[];
-  total_value: number;
-  item_count: number;
-  stats: Record<string, number>;
-}
-
-const DEMO_DATA: InventoryData = {
-  items: [
-    {
-      id: '1',
-      skin: {
-        id: 's1',
-        name: 'Dragon Lore',
-        rarity: 'Covert',
-        image_url: '/cs2-dragon-lore-skin.jpg',
-      },
-      float: 0.0234,
-      condition: 'Factory New',
-      value: 450.0,
-      acquired_from: 'Souvenir',
-      acquired_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '2',
-      skin: {
-        id: 's2',
-        name: 'Fade',
-        rarity: 'Covert',
-        image_url: '/cs2-fade-skin.jpg',
-      },
-      float: 0.0567,
-      condition: 'Minimal Wear',
-      value: 320.0,
-      acquired_from: 'Case',
-      acquired_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '3',
-      skin: {
-        id: 's3',
-        name: 'Crimson Web',
-        rarity: 'Classified',
-        image_url: '/cs2-crimson-web-skin.jpg',
-      },
-      float: 0.1234,
-      condition: 'Field-Tested',
-      value: 210.0,
-      acquired_from: 'Case',
-      acquired_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '4',
-      skin: {
-        id: 's4',
-        name: 'Phantom Disruptor',
-        rarity: 'Classified',
-        image_url: '/cs2-phantom-disruptor-skin.jpg',
-      },
-      float: 0.2345,
-      condition: 'Well-Worn',
-      value: 95.0,
-      acquired_from: 'Case',
-      acquired_at: new Date(
-        Date.now() - 10 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    },
-    {
-      id: '5',
-      skin: {
-        id: 's5',
-        name: 'Point Disarray',
-        rarity: 'Restricted',
-        image_url: '/cs2-point-disarray-skin.jpg',
-      },
-      float: 0.3456,
-      condition: 'Minimal Wear',
-      value: 78.0,
-      acquired_from: 'Case',
-      acquired_at: new Date(
-        Date.now() - 12 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    },
-    {
-      id: '6',
-      skin: {
-        id: 's6',
-        name: 'Hyper Beast',
-        rarity: 'Restricted',
-        image_url: '/cs2-hyper-beast-skin.jpg',
-      },
-      float: 0.1567,
-      condition: 'Factory New',
-      value: 125.0,
-      acquired_from: 'Case',
-      acquired_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '7',
-      skin: {
-        id: 's7',
-        name: 'Rat Rod',
-        rarity: 'Mil-Spec',
-        image_url: '/cs2-rat-rod-skin.jpg',
-      },
-      float: 0.0891,
-      condition: 'Minimal Wear',
-      value: 12.5,
-      acquired_from: 'Case',
-      acquired_at: new Date(
-        Date.now() - 15 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    },
-    {
-      id: '8',
-      skin: {
-        id: 's8',
-        name: 'Anodized Navy',
-        rarity: 'Industrial Grade',
-        image_url: '/cs2-anodized-navy-skin.jpg',
-      },
-      float: 0.2134,
-      condition: 'Field-Tested',
-      value: 2.5,
-      acquired_from: 'Case',
-      acquired_at: new Date(
-        Date.now() - 20 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    },
-    {
-      id: '9',
-      skin: {
-        id: 's9',
-        name: 'Predator',
-        rarity: 'Consumer Grade',
-        image_url: '/cs2-predator-skin.jpg',
-      },
-      float: 0.4567,
-      condition: 'Battle-Scarred',
-      value: 0.5,
-      acquired_from: 'Case',
-      acquired_at: new Date(
-        Date.now() - 25 * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    },
-  ],
-  total_value: 1293.5,
-  item_count: 9,
-  stats: {
-    Covert: 2,
-    Classified: 2,
-    Restricted: 2,
-    'Mil-Spec': 1,
-    'Industrial Grade': 1,
-    'Consumer Grade': 1,
-  },
-};
+import { useInventory } from '@/hooks/useInventory';
+import { authAPI, inventoryAPI, aiAPI } from '@/lib/api';
+import { Loader2, Package, Sparkles, ArrowLeft } from 'lucide-react';
+import { CaseOpeningModal } from '@/components/cases/CaseOpeningModal';
+import { PurchasedCase } from '@/lib/types';
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState<InventoryData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { inventory, loading, error, refresh } = useInventory(false);
   const [sortBy, setSortBy] = useState<'recent' | 'value' | 'rarity'>('recent');
   const [filterRarity, setFilterRarity] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [purchasedCases, setPurchasedCases] = useState<PurchasedCase[]>([]);
+  const [loadingPurchasedCases, setLoadingPurchasedCases] = useState(true);
+  const [selectedPurchasedCase, setSelectedPurchasedCase] =
+    useState<PurchasedCase | null>(null);
+  const [priceInput, setPriceInput] = useState('');
+  const [priceResult, setPriceResult] = useState<string | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
 
   useEffect(() => {
-    const fetchInventory = async () => {
+    setMounted(true);
+    if (!authAPI.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+    const fetchPurchasedCases = async () => {
       try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        setIsLoggedIn(!!token);
-
-        if (!token) {
-          setInventory(DEMO_DATA);
-          setError(null);
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch('/api/inventory', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch inventory');
-        }
-
-        const data = await response.json();
-        setInventory(data);
-        setError(null);
+        setLoadingPurchasedCases(true);
+        const data = await inventoryAPI.getPurchasedCases();
+        setPurchasedCases(data.cases || []);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load inventory'
-        );
-        setInventory(null);
+        console.error('Failed to fetch purchased cases:', err);
       } finally {
-        setLoading(false);
+        setLoadingPurchasedCases(false);
       }
     };
+    fetchPurchasedCases();
+  }, [router]);
 
-    fetchInventory();
-  }, []);
+  const refreshAll = async () => {
+    await refresh();
+    const data = await inventoryAPI.getPurchasedCases();
+    setPurchasedCases(data.cases || []);
+  };
 
-  const sortedItems = inventory?.items
-    ? [...inventory.items].sort((a, b) => {
-        switch (sortBy) {
-          case 'value':
-            return b.value - a.value;
-          case 'rarity':
-            const rarityOrder = [
-              'Covert',
-              'Classified',
-              'Restricted',
-              'Mil-Spec',
-              'Industrial Grade',
-              'Consumer Grade',
-            ];
-            return (
-              rarityOrder.indexOf(b.skin.rarity) -
-              rarityOrder.indexOf(a.skin.rarity)
-            );
-          case 'recent':
-          default:
-            return (
-              new Date(b.acquired_at).getTime() -
-              new Date(a.acquired_at).getTime()
-            );
+  const sortedItems = useMemo(() => {
+    const items = inventory?.items ? [...inventory.items] : [];
+    return items.sort((a, b) => {
+      switch (sortBy) {
+        case 'value':
+          return b.value - a.value;
+        case 'rarity': {
+          const rarityOrder = [
+            'Rare Special',
+            'Covert',
+            'Classified',
+            'Restricted',
+            'Mil-Spec',
+            'Industrial Grade',
+            'Consumer Grade',
+          ];
+          return (
+            rarityOrder.indexOf(b.skin.rarity) - rarityOrder.indexOf(a.skin.rarity)
+          );
         }
-      })
-    : [];
+        case 'recent':
+        default:
+          return (
+            new Date(b.acquired_at).getTime() - new Date(a.acquired_at).getTime()
+          );
+      }
+    });
+  }, [inventory?.items, sortBy]);
 
-  const filteredItems = filterRarity
-    ? sortedItems.filter((item) => item.skin.rarity === filterRarity)
-    : sortedItems;
+  const filteredItems = useMemo(() => {
+    if (!filterRarity) return sortedItems;
+    return sortedItems.filter((item) => item.skin.rarity === filterRarity);
+  }, [sortedItems, filterRarity]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  if (!authAPI.isAuthenticated()) {
+    return null;
+  }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <InventoryHeader />
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground text-lg">
-            Loading your inventory...
-          </p>
+        <div className="flex items-center justify-center h-96 text-muted-foreground">
+          <Loader2 className="w-8 h-8 mr-2 animate-spin" />
+          <span>Loading your inventory...</span>
         </div>
       </div>
     );
@@ -283,9 +114,9 @@ export default function InventoryPage() {
         <div className="flex items-center justify-center h-96">
           <Card className="p-8 text-center max-w-md">
             <p className="text-destructive mb-4">{error}</p>
-            <Link href="/login">
-              <Button variant="default">Go to Login</Button>
-            </Link>
+            <Button variant="default" onClick={() => router.push('/login')}>
+              Go to Login
+            </Button>
           </Card>
         </div>
       </div>
@@ -297,11 +128,111 @@ export default function InventoryPage() {
       <InventoryHeader />
 
       <div className="container mx-auto px-4 py-8 text-muted-foreground bg-secondary my-10">
-        {!isLoggedIn && (
-          <div className="mb-6 p-3 bg-blue-600/20 border border-blue-600/50 rounded-md text-blue-400 text-sm">
-            Viewing demo inventory. Log in to see your real inventory!
+        <div className="mb-6 flex items-center gap-2">
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+          <Button variant="ghost" onClick={() => router.push('/cases')}>
+            Go to Cases
+          </Button>
+        </div>
+
+        <div className="mb-8 rounded-lg border border-amber-500/30 bg-amber-900/10 p-4">
+          <div className="mb-3 flex items-center gap-2 text-amber-300">
+            <Package className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Cases Ready To Open</h2>
           </div>
-        )}
+          {loadingPurchasedCases ? (
+            <p className="text-sm text-muted-foreground">Loading purchased cases...</p>
+          ) : purchasedCases.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No purchased cases yet. Buy cases from the Cases page first.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {purchasedCases.map((item) => (
+                <Card
+                  key={item.id}
+                  className="flex items-center justify-between border-gray-700 bg-gray-900/50 p-3"
+                >
+                  <div>
+                    <p className="font-semibold text-white">{item.case.name}</p>
+                    <p className="text-xs text-gray-400">
+                      Bought: {new Date(item.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setSelectedPurchasedCase(item)}
+                  >
+                    Open
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-8 rounded-lg border border-blue-500/30 bg-blue-900/10 p-4">
+          <div className="mb-3 flex items-center gap-2 text-blue-300">
+            <Sparkles className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">AI Price Check (Mock)</h2>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              placeholder="Enter skin name (e.g., AWP | Asiimov)"
+              className="h-10 flex-1 rounded-md border border-gray-700 bg-gray-950 px-3 text-sm text-white"
+            />
+            <Button
+              disabled={priceLoading || !priceInput.trim()}
+              onClick={async () => {
+                try {
+                  setPriceLoading(true);
+                  const res = await aiAPI.priceCheck(priceInput.trim());
+                  setPriceResult(
+                    `${res.skin_name}: $${res.suggested_usd.toFixed(2)} (${res.provider})`
+                  );
+                } catch (err) {
+                  setPriceResult(
+                    err instanceof Error ? err.message : 'Price check failed'
+                  );
+                } finally {
+                  setPriceLoading(false);
+                }
+              }}
+            >
+              {priceLoading ? 'Checking...' : 'Check Price'}
+            </Button>
+          </div>
+          {priceResult && <p className="mt-2 text-sm text-blue-200">{priceResult}</p>}
+        </div>
+
+        <div className="mb-6 flex items-center gap-3">
+          <Button
+            variant={sortBy === 'recent' ? 'default' : 'outline'}
+            onClick={() => setSortBy('recent')}
+          >
+            Recent
+          </Button>
+          <Button
+            variant={sortBy === 'value' ? 'default' : 'outline'}
+            onClick={() => setSortBy('value')}
+          >
+            Value
+          </Button>
+          <Button
+            variant={sortBy === 'rarity' ? 'default' : 'outline'}
+            onClick={() => setSortBy('rarity')}
+          >
+            Rarity
+          </Button>
+          <Button variant="ghost" onClick={() => setFilterRarity(null)}>
+            Clear Filter
+          </Button>
+        </div>
 
         <div className="flex gap-6">
           <div className="w-48 flex-shrink-0">
@@ -325,15 +256,16 @@ export default function InventoryPage() {
                 <div className="space-y-2">
                   {inventory?.stats &&
                     Object.entries(inventory.stats).map(([rarity, count]) => (
-                      <div
+                      <button
                         key={rarity}
-                        className="flex items-center justify-between text-xs"
+                        className="w-full flex items-center justify-between text-xs hover:opacity-80"
+                        onClick={() =>
+                          setFilterRarity((prev) => (prev === rarity ? null : rarity))
+                        }
                       >
                         <span className="text-muted-foreground">{rarity}</span>
-                        <span className="font-semibold text-foreground">
-                          {count}
-                        </span>
-                      </div>
+                        <span className="font-semibold text-foreground">{count}</span>
+                      </button>
                     ))}
                 </div>
               </div>
@@ -346,22 +278,33 @@ export default function InventoryPage() {
                 <p className="text-muted-foreground mb-4">
                   No skins in your inventory yet
                 </p>
-                <Link href="/">
+                <Link href="/cases">
                   <Button>Open Cases</Button>
                 </Link>
               </Card>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {filteredItems.map((item) => (
-                  <Link key={item.id} href={`/inventory/${item.id}`}>
-                    <SkinCard item={item} />
-                  </Link>
+                  <SkinCard key={item.id} item={item} />
                 ))}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {selectedPurchasedCase && (
+        <CaseOpeningModal
+          open={!!selectedPurchasedCase}
+          onClose={() => setSelectedPurchasedCase(null)}
+          caseItem={selectedPurchasedCase.case}
+          purchasedCaseId={selectedPurchasedCase.id}
+          onSuccess={async () => {
+            await refreshAll();
+            setSelectedPurchasedCase(null);
+          }}
+        />
+      )}
     </div>
   );
 }
