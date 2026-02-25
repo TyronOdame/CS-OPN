@@ -8,12 +8,14 @@ import { DollarSign, Package } from 'lucide-react';
 
 interface CaseCardProps {
   caseItem: Case;
-  onOpen: (caseId: Case) => void;
+  onBuy: (caseId: Case) => void;
   userBalance: number;
 }
 
+const FALLBACK_IMAGE_SRC = '/file.svg';
+
 // Component to display individual case information
-export const CaseCard = ({ caseItem, onOpen, userBalance }: CaseCardProps) => {
+export const CaseCard = ({ caseItem, onBuy, userBalance }: CaseCardProps) => {
   // check if user has enough balance to open the case
   const canAfford = userBalance >= caseItem.price;
 
@@ -24,6 +26,12 @@ export const CaseCard = ({ caseItem, onOpen, userBalance }: CaseCardProps) => {
         <img
           src={caseItem.image_url}
           alt={caseItem.name}
+          onError={(event) => {
+            const img = event.currentTarget;
+            if (img.dataset.fallbackApplied) return;
+            img.dataset.fallbackApplied = 'true';
+            img.src = FALLBACK_IMAGE_SRC;
+          }}
           className="w-full h-full object-contain transition-transform group-hover:scale-110 p-8"
         />
         {/* Glow effect on hover */}
@@ -55,11 +63,11 @@ export const CaseCard = ({ caseItem, onOpen, userBalance }: CaseCardProps) => {
       {/* Button Section */}
       <CardFooter className="p-6 pt-0">
         <Button
-          onClick={() => onOpen(caseItem)}
+          onClick={() => onBuy(caseItem)}
           disabled={!canAfford}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {canAfford ? 'Open Case' : 'Insufficient Funds'}
+          {canAfford ? 'Buy Case' : 'Insufficient Funds'}
         </Button>
       </CardFooter>
     </Card>

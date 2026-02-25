@@ -1,92 +1,73 @@
 package seed
 
 import (
-    "github.com/TyronOdame/CS-OPN/backend/database"
-    "github.com/TyronOdame/CS-OPN/backend/models"
-    "log"
+	"log"
+
+	"github.com/TyronOdame/CS-OPN/backend/database"
+	"github.com/TyronOdame/CS-OPN/backend/models"
 )
 
-// SeedCaseSkins links skins to cases with drop rates
+// SeedCaseSkins seeds case contents used by open-case logic.
+// Note: despite the name, runtime open flow reads from case_contents.
 func SeedCaseSkins() {
-    // Check if already seeded
-    var count int64
-    database.DB.Model(&models.CaseSkin{}).Count(&count)
-    if count > 0 {
-        log.Println("🔗 Case-Skin links already seeded, skipping...")
-        return
-    }
+	// Check if case contents are already seeded.
+	var contentCount int64
+	database.DB.Model(&models.CaseContent{}).Count(&contentCount)
+	if contentCount > 0 {
+		log.Println("📦 Case contents already seeded, skipping...")
+		return
+	}
 
-    // Get all cases
-    var cases []models.Case
-    database.DB.Find(&cases)
+	// Get all cases.
+	var cases []models.Case
+	if err := database.DB.Find(&cases).Error; err != nil {
+		log.Printf("❌ Failed to load cases for case_contents seeding: %v", err)
+		return
+	}
+	if len(cases) == 0 {
+		log.Println("⚠️  No cases found, skipping case_contents seeding.")
+		return
+	}
 
-    // Get skins by rarity
-    var commonSkins, uncommonSkins, rareSkins, veryRareSkins, extremeRareSkins, legendarySkins []models.Skin
-    database.DB.Where("rarity IN ?", []string{"Consumer Grade", "Industrial Grade"}).Find(&commonSkins)
-    database.DB.Where("rarity = ?", "Mil-Spec").Find(&uncommonSkins)
-    database.DB.Where("rarity = ?", "Restricted").Find(&rareSkins)
-    database.DB.Where("rarity = ?", "Classified").Find(&veryRareSkins)
-    database.DB.Where("rarity = ?", "Covert").Find(&extremeRareSkins)
-    database.DB.Where("rarity = ?", "Rare Special").Find(&legendarySkins)
+	// Get skins by rarity buckets.
+	var commonSkins, uncommonSkins, rareSkins, veryRareSkins, extremeRareSkins, legendarySkins []models.Skin
+	database.DB.Where("rarity IN ?", []string{"Consumer Grade", "Industrial Grade"}).Find(&commonSkins)
+	database.DB.Where("rarity = ?", "Mil-Spec").Find(&uncommonSkins)
+	database.DB.Where("rarity = ?", "Restricted").Find(&rareSkins)
+	database.DB.Where("rarity = ?", "Classified").Find(&veryRareSkins)
+	database.DB.Where("rarity = ?", "Covert").Find(&extremeRareSkins)
+	database.DB.Where("rarity = ?", "Rare Special").Find(&legendarySkins)
 
-    // Link skins to each case with realistic drop rates
-    for _, c := range cases {
-        log.Printf("🔗 Linking skins to case: %s", c.Name)
+	for _, c := range cases {
+		log.Printf("📦 Seeding case contents for case: %s", c.Name)
 
-        // Common skins (80% total drop rate)
-        for _, skin := range commonSkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 40.0, // Each common has 40% chance
-            })
-        }
+		// Total drop chances per bucket (sum ~= 1.0).
+		seedCaseContentsForCase(c, commonSkins, 0.80)
+		seedCaseContentsForCase(c, uncommonSkins, 0.15)
+		seedCaseContentsForCase(c, rareSkins, 0.03)
+		seedCaseContentsForCase(c, veryRareSkins, 0.015)
+		seedCaseContentsForCase(c, extremeRareSkins, 0.004)
+		seedCaseContentsForCase(c, legendarySkins, 0.001)
+	}
 
-        // Uncommon skins (15% total drop rate)
-        for _, skin := range uncommonSkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 7.5, // Each uncommon has 7.5% chance
-            })
-        }
+	log.Println("📦 Case contents seeding complete!")
+}
 
-        // Rare skins (3% total drop rate)
-        for _, skin := range rareSkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 1.5, // Each rare has 1.5% chance
-            })
-        }
+func seedCaseContentsForCase(caseItem models.Case, skins []models.Skin, totalDropChance float64) {
+	if len(skins) == 0 || totalDropChance <= 0 {
+		return
+	}
 
-        // Very rare skins (1.5% total drop rate)
-        for _, skin := range veryRareSkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 0.75, // Each very rare has 0.75% chance
-            })
-        }
+	perSkinChance := totalDropChance / float64(len(skins))
 
-        // Extremely rare skins (0.4% total drop rate)
-        for _, skin := range extremeRareSkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 0.2, // Each extremely rare has 0.2% chance
-            })
-        }
-
-        // Legendary skins (0.1% drop rate)
-        for _, skin := range legendarySkins {
-            database.DB.Create(&models.CaseSkin{
-                CaseID:   c.ID,
-                SkinID:   skin.ID,
-                DropRate: 0.1, // Legendary has 0.1% chance (1 in 1000)
-            })
-        }
-    }
-
-    log.Println("🔗 Case-Skin linking complete!")
+	for _, skin := range skins {
+		content := models.CaseContent{
+			CaseID:     caseItem.ID,
+			SkinID:     skin.ID,
+			DropChance: perSkinChance,
+		}
+		if err := database.DB.Create(&content).Error; err != nil {
+			log.Printf("❌ Failed to create case_content for case=%s skin=%s: %v", caseItem.Name, skin.Name, err)
+		}
+	}
 }
