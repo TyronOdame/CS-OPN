@@ -30,6 +30,8 @@ interface SkinDetailViewProps {
   item: InventoryItem;
 }
 
+const FALLBACK_IMAGE_SRC = '/file.svg';
+
 const RARITY_INFO: Record<string, { color: string; description: string }> = {
   Covert: { color: 'text-red-400', description: 'Extremely Rare' },
   Classified: { color: 'text-purple-400', description: 'Very Rare' },
@@ -83,11 +85,17 @@ export default function SkinDetailView({ item }: SkinDetailViewProps) {
             <div className="relative w-full bg-gradient-to-br from-card to-background p-8 aspect-square flex items-center justify-center">
               {item.skin.image_url ? (
                 <Image
-                  src={item.skin.image_url || '/placeholder.svg'}
+                  src={item.skin.image_url || FALLBACK_IMAGE_SRC}
                   alt={item.skin.name}
                   width={500}
                   height={500}
                   unoptimized
+                  onError={(event) => {
+                    const img = event.currentTarget as HTMLImageElement;
+                    if (img.dataset.fallbackApplied) return;
+                    img.dataset.fallbackApplied = 'true';
+                    img.src = FALLBACK_IMAGE_SRC;
+                  }}
                   className="max-w-full max-h-full object-contain"
                   priority
                 />

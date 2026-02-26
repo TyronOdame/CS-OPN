@@ -20,6 +20,8 @@ interface SkinCardProps {
   item: InventoryItem;
 }
 
+const FALLBACK_IMAGE_SRC = '/file.svg';
+
 const RARITY_COLORS: Record<
   string,
   { bg: string; border: string; text: string }
@@ -67,10 +69,16 @@ export default function SkinCard({ item }: SkinCardProps) {
       {/* Image Container */}
       {item.skin.image_url ? (
         <Image
-          src={item.skin.image_url || '/placeholder.svg'}
+          src={item.skin.image_url || FALLBACK_IMAGE_SRC}
           alt={item.skin.name}
           fill
           unoptimized
+          onError={(event) => {
+            const img = event.currentTarget as HTMLImageElement;
+            if (img.dataset.fallbackApplied) return;
+            img.dataset.fallbackApplied = 'true';
+            img.src = FALLBACK_IMAGE_SRC;
+          }}
           className="object-cover group-hover:scale-110 transition-transform duration-300"
         />
       ) : (

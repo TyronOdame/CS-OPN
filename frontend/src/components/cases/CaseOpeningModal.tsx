@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Case,
+  CaseDetails,
   CaseOpenResult,
   RARITY_COLORS,
   RARITY_TEXT_COLORS,
+  Skin,
 } from '@/lib/types';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Package, DollarSign } from 'lucide-react';
-import { casesAPI } from '@/lib/api';
+import { Sparkles, Package, DollarSign } from 'lucide-react';
+import { casesAPI, inventoryAPI } from '@/lib/api';
+
+const FALLBACK_IMAGE_SRC = '/file.svg';
 
 /**
  * Props for CaseOpeningModal
@@ -20,6 +24,7 @@ interface CaseOpeningModalProps {
   onClose: () => void; // Function to close modal
   caseItem: Case; // The case being opened
   onSuccess: () => void; // Function to call after successful opening (refresh inventory)
+  purchasedCaseId: string;
 }
 
 /**
@@ -36,70 +41,119 @@ export const CaseOpeningModal = ({
   onClose,
   caseItem,
   onSuccess,
+  purchasedCaseId,
 }: CaseOpeningModalProps) => {
-  // Track which stage of the opening we're in
-  const [stage, setStage] = useState<
-    'ready' | 'opening' | 'revealing' | 'revealed'
-  >('ready');
-
-  // Store the result from the API
+  const [stage, setStage] = useState<'ready' | 'opening' | 'revealed'>('ready');
   const [result, setResult] = useState<CaseOpenResult | null>(null);
-
-  // Store any error messages
   const [error, setError] = useState<string | null>(null);
+  const [caseDetails, setCaseDetails] = useState<CaseDetails | null>(null);
+  const [loadingCaseDetails, setLoadingCaseDetails] = useState(false);
+  const [reelSkins, setReelSkins] = useState<Skin[]>([]);
+  const [reelOffset, setReelOffset] = useState(0);
+  const [isRolling, setIsRolling] = useState(false);
+  const reelViewportRef = useRef<HTMLDivElement>(null);
 
-  // Reset state when modal opens/closes
+  const ROLL_ITEM_WIDTH = 140;
+  const ROLL_GAP = 12;
+  const MAX_VISIBLE_WIDTH = 720;
+  const ROLL_DURATION_MS = 4500;
+
   useEffect(() => {
     if (open) {
       setStage('ready');
       setResult(null);
       setError(null);
-    }
-  }, [open]);
+      setReelSkins([]);
+      setReelOffset(0);
+      setIsRolling(false);
 
-  /**
-   * Handle opening the case
-   * This function:
-   * 1. Shows opening animation
-   * 2. Calls backend API
-   * 3. Shows revealing animation
-   * 4. Shows final result
-   */
+      const loadCaseDetails = async () => {
+        try {
+          setLoadingCaseDetails(true);
+          const details = await casesAPI.getCaseById(caseItem.id);
+          setCaseDetails(details);
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : 'Failed to load case contents'
+          );
+        } finally {
+          setLoadingCaseDetails(false);
+        }
+      };
+
+      loadCaseDetails();
+    }
+  }, [open, caseItem.id]);
+
+  const pickWeightedSkin = (pool: CaseDetails['skins']): Skin => {
+    if (!pool.length) {
+      throw new Error('No skins available in this case');
+    }
+    const totalWeight = pool.reduce(
+      (sum, skin) => sum + (skin.drop_chance || 0),
+      0
+    );
+    if (totalWeight <= 0) {
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    const roll = Math.random() * totalWeight;
+    let cumulative = 0;
+    for (const skin of pool) {
+      cumulative += skin.drop_chance || 0;
+      if (roll <= cumulative) return skin;
+    }
+    return pool[pool.length - 1];
+  };
+
   const handleOpenCase = async () => {
+    if (loadingCaseDetails) return;
+
     setStage('opening');
     setError(null);
 
     try {
-      // Show spinning animation for 2 seconds
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const openResult = await inventoryAPI.openPurchasedCase(purchasedCaseId);
+      const pool = caseDetails?.skins || [];
+      const winnerIndex = 42;
+      const totalItems = 56;
+      const generated: Skin[] = [];
 
-      // Call backend API to open the case
-      const openResult = await casesAPI.openCase(caseItem.id);
+      for (let i = 0; i < totalItems; i++) {
+        generated.push(
+          pool.length ? pickWeightedSkin(pool) : { ...openResult.skin }
+        );
+      }
+      generated[winnerIndex] = openResult.skin;
+
+      setIsRolling(false);
+      setReelSkins(generated);
+      setReelOffset(0);
       setResult(openResult);
 
-      // Show revealing stage (skin bounces in)
-      setStage('revealing');
+      requestAnimationFrame(() => {
+        const currentViewportWidth =
+          reelViewportRef.current?.clientWidth || MAX_VISIBLE_WIDTH;
+        const centerOffset = currentViewportWidth / 2 - ROLL_ITEM_WIDTH / 2;
+        const targetOffset =
+          -(winnerIndex * (ROLL_ITEM_WIDTH + ROLL_GAP) - centerOffset);
+        setIsRolling(true);
+        setReelOffset(targetOffset);
+      });
 
-      // After 1 second, show final revealed state
       setTimeout(() => {
         setStage('revealed');
-      }, 1000);
+      }, ROLL_DURATION_MS + 150);
     } catch (err) {
-      // If something goes wrong, show error and go back to ready
       setError(err instanceof Error ? err.message : 'Failed to open case');
       setStage('ready');
     }
   };
 
-  /**
-   * Handle closing the modal
-   * If we successfully opened a case, refresh the inventory
-   */
   const handleClose = () => {
     if (stage === 'revealed') {
-      onSuccess(); // Refresh inventory/balance
+      onSuccess();
     }
-    onClose(); // Close modal
+    onClose();
   };
 
   // Get the color gradient for the skin rarity
@@ -125,6 +179,12 @@ export const CaseOpeningModal = ({
               <img
                 src={caseItem.image_url}
                 alt={caseItem.name}
+                onError={(event) => {
+                  const img = event.currentTarget;
+                  if (img.dataset.fallbackApplied) return;
+                  img.dataset.fallbackApplied = 'true';
+                  img.src = FALLBACK_IMAGE_SRC;
+                }}
                 className="w-48 h-48 mx-auto object-contain"
               />
             </div>
@@ -159,115 +219,136 @@ export const CaseOpeningModal = ({
               </Button>
               <Button
                 onClick={handleOpenCase}
+                disabled={loadingCaseDetails}
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 <Package className="w-4 h-4 mr-2" />
-                Open Case
+                {loadingCaseDetails ? 'Loading...' : 'Open Case'}
               </Button>
             </div>
           </div>
         )}
 
-        {/* ========================================
-            STAGE 2: OPENING - Spinning Animation
-            ======================================== */}
+        {/* Opening animation */}
         {stage === 'opening' && (
-          <div className="text-center py-16">
-            {/* Spinning Loader */}
-            <div className="relative mb-8">
-              <Loader2 className="w-24 h-24 mx-auto animate-spin text-blue-500" />
-              <Sparkles className="w-12 h-12 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400 animate-pulse" />
-            </div>
+          <div className="py-8">
+            <h2 className="mb-2 text-center text-2xl font-bold">Opening Case...</h2>
+            <p className="mb-6 text-center text-gray-400">
+              Watch the reel spin and stop on your item
+            </p>
 
-            {/* Loading Text */}
-            <h2 className="text-2xl font-bold mb-2">Opening Case...</h2>
-            <p className="text-gray-400">Preparing your reward</p>
+            <div className="px-4 sm:px-6">
+              <div ref={reelViewportRef} className="relative mx-auto w-full max-w-[720px]">
+                <div className="relative overflow-hidden rounded-lg border border-gray-800 bg-gray-900/80 py-4">
+                  <div
+                    className="flex"
+                    style={{
+                      gap: `${ROLL_GAP}px`,
+                      transform: `translateX(${reelOffset}px)`,
+                      transition: isRolling
+                        ? `transform ${ROLL_DURATION_MS}ms cubic-bezier(0.12, 0.75, 0.2, 1)`
+                        : 'none',
+                    }}
+                  >
+                    {reelSkins.map((skin, index) => {
+                      const rarityGradient =
+                        RARITY_COLORS[skin.rarity] || 'from-gray-500 to-gray-600';
+                      return (
+                        <div
+                          key={`${skin.id}-${index}`}
+                          className="shrink-0 rounded-lg border border-gray-700 bg-gray-950 p-2"
+                          style={{ width: `${ROLL_ITEM_WIDTH}px` }}
+                        >
+                          <div
+                            className={`mb-2 h-1 rounded bg-gradient-to-r ${rarityGradient}`}
+                          />
+                          <img
+                            src={skin.image_url}
+                            alt={skin.name}
+                            onError={(event) => {
+                              const img = event.currentTarget;
+                              if (img.dataset.fallbackApplied) return;
+                              img.dataset.fallbackApplied = 'true';
+                              img.src = FALLBACK_IMAGE_SRC;
+                            }}
+                            className="mx-auto h-20 w-20 object-contain"
+                          />
+                          <p className="line-clamp-2 text-center text-xs text-gray-200">
+                            {skin.name}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="pointer-events-none absolute inset-y-0 left-1/2 z-30 w-[2px] -translate-x-1/2 bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.95)]" />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ========================================
-            STAGE 3 & 4: REVEALING / REVEALED
-            ======================================== */}
-        {(stage === 'revealing' || stage === 'revealed') && result && (
+        {/* Final reveal */}
+        {stage === 'revealed' && result && (
           <div className="text-center py-8">
-            {/* Rarity Color Stripe */}
             <div
               className={`h-2 bg-gradient-to-r ${rarityGradient} mb-6 rounded-full animate-pulse`}
             />
 
-            {/* Skin Image */}
-            <div
-              className={`relative mb-6 ${
-                stage === 'revealing' ? 'animate-bounce' : ''
-              }`}
-            >
+            <div className="relative mb-6">
               <div className="relative inline-block">
                 <img
                   src={result.skin.image_url}
                   alt={result.skin.name}
+                  onError={(event) => {
+                    const img = event.currentTarget;
+                    if (img.dataset.fallbackApplied) return;
+                    img.dataset.fallbackApplied = 'true';
+                    img.src = FALLBACK_IMAGE_SRC;
+                  }}
                   className="w-64 h-64 object-contain mx-auto"
                 />
-                {/* Glow Effect (only when fully revealed) */}
-                {stage === 'revealed' && (
-                  <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-yellow-400/30 animate-pulse" />
-                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-yellow-400/30 animate-pulse" />
               </div>
             </div>
 
-            {/* Skin Details */}
             <div className="space-y-3">
-              {/* Skin Name */}
               <h2 className="text-3xl font-bold">{result.skin.name}</h2>
-
-              {/* Rarity */}
               <div className={`text-xl font-semibold ${rarityTextColor}`}>
                 {result.skin.rarity}
               </div>
-
-              {/* Condition */}
-              <div className="text-lg text-gray-300">
-                {result.inventory_item.condition}
-              </div>
-
-              {/* Float Value */}
+              <div className="text-lg text-gray-300">{result.condition}</div>
               <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-                <span>Float: {result.inventory_item.float.toFixed(4)}</span>
+                <span>Float: {result.float.toFixed(4)}</span>
               </div>
-
-              {/* Item Value */}
               <div className="flex items-center justify-center gap-2 text-green-400 text-2xl font-bold mt-4">
                 <DollarSign className="w-6 h-6" />
-                <span>{result.inventory_item.value.toFixed(2)} CB</span>
+                <span>{result.value.toFixed(2)} CB</span>
               </div>
-
-              {/* New Balance */}
               <div className="text-sm text-gray-500 mt-2">
                 New Balance: ${result.new_balance.toFixed(2)} CB
               </div>
             </div>
 
-            {/* Action Buttons (only when fully revealed) */}
-            {stage === 'revealed' && (
-              <div className="mt-8 space-y-3">
-                <Button
-                  onClick={handleClose}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Awesome! Add to Inventory
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setStage('ready');
-                    setResult(null);
-                  }}
-                  className="w-full"
-                >
-                  Open Another Case
-                </Button>
-              </div>
-            )}
+            <div className="mt-8 space-y-3">
+              <Button
+                onClick={handleClose}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Awesome! Add to Inventory
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStage('ready');
+                  setResult(null);
+                  setError(null);
+                }}
+                className="w-full"
+              >
+                Open Another Case
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
