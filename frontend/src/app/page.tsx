@@ -1,9 +1,32 @@
+/* eslint-disable @next/next/no-img-element */
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { casesAPI } from '@/lib/api';
+import { Case } from '@/lib/types';
+
+const FALLBACK_IMAGE_SRC = '/file.svg';
 
 export default function HomePage() {
+  const [featuredCases, setFeaturedCases] = useState<Case[]>([]);
+
+  useEffect(() => {
+    const loadFeaturedCases = async () => {
+      try {
+        const allCases = await casesAPI.getAllCases();
+        setFeaturedCases((allCases || []).slice(0, 3));
+      } catch {
+        setFeaturedCases([]);
+      }
+    };
+
+    loadFeaturedCases();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#222222]">
       {/* Navigation */}
@@ -67,46 +90,37 @@ export default function HomePage() {
             Featured Cases
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Operation Bravo Case',
-                rarity: 'Special',
-                color: 'text-primary',
-              },
-              {
-                name: 'Chroma 3 Case',
-                rarity: 'Rare',
-                color: 'text-chart-2',
-              },
-              {
-                name: 'Fracture Case',
-                rarity: 'Common',
-                color: 'text-chart-4',
-              },
-            ].map((caseItem, index) => (
+            {featuredCases.map((caseItem) => (
               <Card
-                key={index}
+                key={caseItem.id}
                 className="p-6 hover:bg-card/80 transition-all duration-300 cs2-float group cursor-pointer"
               >
                 <div className="text-center">
                   <div className="mb-4 relative">
                     <div className="w-32 h-32 mx-auto bg-muted/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <span className="text-muted-foreground text-sm">
-                        Case Image
-                      </span>
+                      <img
+                        src={caseItem.image_url}
+                        alt={caseItem.name}
+                        onError={(event) => {
+                          const img = event.currentTarget;
+                          if (img.dataset.fallbackApplied) return;
+                          img.dataset.fallbackApplied = 'true';
+                          img.src = FALLBACK_IMAGE_SRC;
+                        }}
+                        className="h-full w-full rounded-lg object-contain p-3"
+                      />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <h3 className="text-lg font-semibold mb-2">
                     {caseItem.name}
                   </h3>
-                  <Badge
-                    variant="outline"
-                    className={`mb-4 ${caseItem.color} border-current`}
-                  >
-                    {caseItem.rarity}
+                  <Badge variant="outline" className="mb-4 text-primary border-current">
+                    Featured
                   </Badge>
-                  <Button className="w-full">Open Case</Button>
+                  <Link href="/cases" className="block">
+                    <Button className="w-full">Open Case</Button>
+                  </Link>
                 </div>
               </Card>
             ))}

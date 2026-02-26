@@ -72,6 +72,8 @@ export interface RegisterRequest {
 export interface AuthResponse {
   token: string;
   user: User;
+  daily_reward_claimed?: boolean;
+  daily_reward_amount?: number;
 }
 
 // case types
@@ -85,11 +87,57 @@ export interface Case {
   updated_at: string;
 }
 
+export interface CaseSkinOption extends Skin {
+  drop_chance: number;
+  drop_percentage: number;
+}
+
+export interface CaseDetails extends Case {
+  skins: CaseSkinOption[];
+}
+
 // case opening result
 export interface CaseOpenResult {
+  message: string;
+  case: Case;
   skin: Skin;
-  inventory_item: InventoryItem;
+  float: number;
+  condition: string;
+  value: number;
   new_balance: number;
+  inventory_id: string;
+  transaction_id: string;
+}
+
+export interface PurchasedCase {
+  id: string;
+  user_id: string;
+  case_id: string;
+  is_opened: boolean;
+  opened_at?: string;
+  created_at: string;
+  updated_at: string;
+  case: Case;
+}
+
+export interface PurchasedCasesResponse {
+  cases: PurchasedCase[];
+  count: number;
+}
+
+export interface CaseBuyResult {
+  message: string;
+  purchased_case: PurchasedCase;
+  case: Case;
+  new_balance: number;
+  transaction_id: string;
+}
+
+export interface PriceCheckResponse {
+  provider: string;
+  skin_name: string;
+  suggested_usd: number;
+  message: string;
 }
 
 // Rarity colors for UI

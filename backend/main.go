@@ -44,21 +44,22 @@ func main() {
 	//  Seed test data
 	log.Println("🌱 Starting database seeding...")
 	seed.SeedCases()
-	seed.SeedSkins()        
+	seed.SeedSkins()
 	seed.SeedCaseSkins()
+	seed.SyncImageURLs()
 	log.Println("✅ Database seeding complete!")
 
-	// Create HTTP server 
+	// Create HTTP server
 	router := gin.Default()
 
 	// CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
-        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-        ExposeHeaders:    []string{"Content-Length"},
-        AllowCredentials: true,
-        MaxAge:           12 * 3600, // 12 hours
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600, // 12 hours
 	}))
 
 	// Health Check Endpoints
@@ -112,7 +113,7 @@ func main() {
 	transactionRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	{
 		transactionRoutes.GET("", handlers.GetUserTransactions)
-	
+
 	}
 
 	// AI price check (mocked provider for v1)
@@ -131,6 +132,4 @@ func main() {
 	log.Printf("🔐 Register: POST http://localhost:%s/auth/register", cfg.ServerPort)
 	router.Run(":" + cfg.ServerPort)
 
-
-	
 }

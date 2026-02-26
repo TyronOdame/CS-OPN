@@ -25,7 +25,7 @@ export default function InventoryHeader() {
                 Inventory
               </Button>
             </Link>
-            <Link href="/">
+            <Link href="/cases">
               <Button variant="ghost" size="sm">
                 Cases
               </Button>
