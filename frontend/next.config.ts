@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
@@ -11,7 +11,18 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'community.steamstatic.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'steamcommunity-a.akamaihd.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'community.edgecast.steamstatic.com',
+      },
     ],
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 

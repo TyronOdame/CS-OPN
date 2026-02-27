@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 
 	"github.com/TyronOdame/CS-OPN/backend/database"
 	"github.com/TyronOdame/CS-OPN/backend/handlers"
@@ -41,20 +42,42 @@ func main() {
 		log.Fatal("❌ Database seeding failed:", err)
 	}
 
-	//  Seed test data
-	log.Println("🌱 Starting database seeding...")
-	seed.SeedCases()
-	seed.SeedSkins()
-	seed.SeedCaseSkins()
-	seed.SyncImageURLs()
-	log.Println("✅ Database seeding complete!")
+	runSeedOnStart := strings.EqualFold(getEnv("RUN_SEED_ON_START", "true"), "true")
+	syncImagesOnStart := strings.EqualFold(getEnv("SYNC_IMAGES_ON_START", "true"), "true")
+
+	// Seed test data (can be toggled via env in production)
+	if runSeedOnStart {
+		log.Println("🌱 Starting database seeding...")
+		seed.SeedCases()
+		seed.SeedSkins()
+		seed.SeedCaseSkins()
+		if syncImagesOnStart {
+			seed.SyncImageURLs()
+		}
+		log.Println("✅ Database seeding complete!")
+	}
 
 	// Create HTTP server
 	router := gin.Default()
 
+	allowedOrigins := []string{"http://localhost:3000"}
+	if cfg.frontendURL != "" {
+		originsFromEnv := strings.Split(cfg.frontendURL, ",")
+		parsedOrigins := make([]string, 0, len(originsFromEnv))
+		for _, origin := range originsFromEnv {
+			trimmedOrigin := strings.TrimSpace(origin)
+			if trimmedOrigin != "" {
+				parsedOrigins = append(parsedOrigins, trimmedOrigin)
+			}
+		}
+		if len(parsedOrigins) > 0 {
+			allowedOrigins = parsedOrigins
+		}
+	}
+
 	// CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
