@@ -9,33 +9,31 @@ import (
 
 // Config has access to all the configuration variables needed for the application
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
+	DBHost      string
+	DBPort      string
+	DBUser      string
+	DBPassword  string
+	DBName      string
 	ServerPort  string
-	JWTSecret  string
+	JWTSecret   string
 	frontendURL string
-
 }
-
 
 // LoadConfig function retrieves configuration from environment variables
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
 	if err := godotenv.Load(); err != nil {
-		return nil, fmt.Errorf("error loading .env file: %w", err)
+		fmt.Println("⚠️ .env not found, using environment variables")
 	}
 	// retrieve each variable from the environment
 	config := &Config{
-		DBHost:   os.Getenv("DB_HOST"),
-		DBPort:     os.Getenv("DB_PORT"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
+		DBHost:      os.Getenv("DB_HOST"),
+		DBPort:      os.Getenv("DB_PORT"),
+		DBUser:      os.Getenv("DB_USER"),
+		DBPassword:  os.Getenv("DB_PASSWORD"),
+		DBName:      os.Getenv("DB_NAME"),
 		ServerPort:  getEnv("PORT", "8080"),
-		JWTSecret:  os.Getenv("JWT_SECRET"),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
 		frontendURL: os.Getenv("FRONTEND_URL"),
 	}
 
@@ -50,7 +48,7 @@ func LoadConfig() (*Config, error) {
 }
 
 // getEnv replaces os.getenv with fallback values if env var is missing
-func getEnv(key, defaultValue string) string  {
+func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
 		return defaultValue
