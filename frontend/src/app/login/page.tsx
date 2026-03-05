@@ -411,7 +411,7 @@ export default function LoginPage() {
             <div className="text-center text-sm text-zinc-400">
               {currentView === 'login' && (
                 <>
-                  Don't Have An Account?{' '}
+                  Don&apos;t Have An Account?{' '}
                   <button
                     className="p-0 h-auto text-sm text-[#ea580c] hover:text-[#ea580c]/80 font-medium cursor-pointer underline-offset-4 hover:underline"
                     onClick={() => setCurrentView('register')}
