@@ -25,6 +25,7 @@ export const useInventory = (showSold = false) => {
 
   useEffect(() => {
     fetchInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSold]);
 
   const sellItem = async (itemId: string) => {

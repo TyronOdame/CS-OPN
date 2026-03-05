@@ -176,6 +176,7 @@ export const CaseOpeningModal = ({
           <div className="text-center py-8">
             {/* Case Image */}
             <div className="mb-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={caseItem.image_url}
                 alt={caseItem.name}
@@ -262,6 +263,7 @@ export const CaseOpeningModal = ({
                           <div
                             className={`mb-2 h-1 rounded bg-gradient-to-r ${rarityGradient}`}
                           />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={skin.image_url}
                             alt={skin.name}
@@ -296,6 +298,7 @@ export const CaseOpeningModal = ({
 
             <div className="relative mb-6">
               <div className="relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={result.skin.image_url}
                   alt={result.skin.name}
